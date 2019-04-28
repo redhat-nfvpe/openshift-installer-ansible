@@ -1,0 +1,37 @@
+---
+- name: put selinux in permissive mode
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: disable selinux
+  selinux:
+    state: disabled
+
+- name: install package
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - bind-utils
+    - epel-release
+    - ansible
+    - make
+    - vim
+    - wget
+
+- name: create keypair
+  command: ssh-keygen -q -t rsa -f /root/.ssh/id_rsa -N ""
+  args:
+    creates: /root/.ssh/id_rsa
+
+- name: enable ip forward
+  become: yes
+  copy:
+    content: net.ipv4.ip_forward = 1
+    dest: /etc/sysctl.d/99-ipforward.conf
+
+- name: apply ip forward
+  become: yes
+  command: sysctl -p /etc/sysctl.d/99-ipforward.conf

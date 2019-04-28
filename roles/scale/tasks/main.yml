@@ -1,0 +1,60 @@
+---
+- name: create scale dir
+  file:
+    path: "{{ base_scale_dir }}"
+    state: directory
+
+- name: install git & ansible
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - git
+    - ansible
+
+- name: clone openshift-ansible
+  git:
+    repo: https://github.com/openshift/openshift-ansible.git
+    dest: "{{ base_scale_dir }}/openshift-ansible"
+
+- name: create pul_secret txt
+  copy:
+    dest: /root/pull-secret.txt
+    content: "{{ pull_secret }}"
+
+- name: generate scale inventory
+  template:
+    src: inventory.scale.j2
+    dest: "{{ base_scale_dir }}/inventory.scale"
+
+- name: configure new worker in etc-hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+  with_items:
+    - "{{ new_worker_ip }} worker-1.{{ cluster_domain }}"
+
+- name: configure new worker for ingress-http
+  lineinfile:
+    path: /etc/haproxy/haproxy.cfg
+    insertafter: "^server worker-0 worker-0.{{ cluster_domain }}:80 check"
+    line: "server worker-1 worker-1.{{ cluster_domain }}:80 check"
+
+- name: configure new worker for ingress-https
+  lineinfile:
+    path: /etc/haproxy/haproxy.cfg
+    insertafter: "^server worker-0 worker-0.{{ cluster_domain }}:443 check"
+    line: "server worker-1 worker-1.{{ cluster_domain }}:443 check"
+
+- name: reload nm service
+  become: yes
+  service:
+    name: NetworkManager
+    state: reloaded
+
+- name: restart haproxy
+  become: yes
+  service:
+    name: haproxy
+    state: restarted

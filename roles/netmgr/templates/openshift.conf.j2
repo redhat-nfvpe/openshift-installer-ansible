@@ -1,0 +1,8 @@
+local=/{{ cluster_domain }}/
+
+server=/{{ cluster_domain }}/192.168.122.1
+
+address=/apps.{{ cluster_domain }}/{{ host_ipv4.stdout }}
+address=/api.{{ cluster_domain }}/{{ host_ipv4.stdout }}
+
+srv-host=_etcd-server-ssl._tcp.{{ cluster_domain }},etcd-0.{{ cluster_domain }},2380,0,10

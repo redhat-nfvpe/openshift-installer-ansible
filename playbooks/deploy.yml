@@ -1,0 +1,17 @@
+---
+- hosts: hypervisor
+  gather_facts: no
+  tasks:
+    - name: set fact - cluster domain
+      set_fact:
+        cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
+
+- name: deploy libvirt cluster
+  hosts: hypervisor
+  gather_facts: no
+  roles:
+    - roles/sysconfig
+    - roles/netmgr
+    - roles/libvirt
+    - roles/haproxy
+    - roles/installer

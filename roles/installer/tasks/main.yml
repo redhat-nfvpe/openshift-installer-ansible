@@ -1,0 +1,85 @@
+---
+- name: create env dir
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ base_dir }}"
+    - "{{ base_dir }}/bin"
+    - "{{ base_dir }}/ign"
+
+- name: create /root/.kube/ dir
+  file:
+    path: "/root/.kube/"
+    state: directory
+
+- name: download openshift client
+  get_url:
+    url: "{{ release_url }}/{{ installer_version }}/openshift-client-linux-{{ installer_version }}.tar.gz"
+    dest: "{{ base_dir }}/bin/client-{{ installer_version }}.tar.gz"
+
+- name: download openshift installer
+  get_url:
+    url: "{{ release_url }}/{{ installer_version }}/openshift-install-linux-{{ installer_version }}.tar.gz"
+    dest: "{{ base_dir }}/bin/install-{{ installer_version }}.tar.gz"
+
+- name: extract installer
+  unarchive:
+    src: "{{ base_dir }}/bin/install-{{ installer_version }}.tar.gz"
+    dest: "{{ base_dir }}"
+    remote_src: yes
+
+- name: extract client
+  unarchive:
+    src: "{{ base_dir }}/bin/client-{{ installer_version }}.tar.gz"
+    dest: "/usr/bin"
+    remote_src: yes
+
+- name: download rhcos qemu image
+  shell: "[[ -e rhcos-{{ rhcos_version }}-qemu.qcow2 ]] || curl --insecure --compressed -J -L -O {{ rhcos_url }}/{{ rhcos_version }}/rhcos-{{ rhcos_version }}-qemu.qcow2"
+  args:
+    chdir: "{{ base_dir }}/bin"
+
+#- name: extract rhcos image
+#  command: "gunzip {{ base_dir }}/bin/rhcos.qcow2.gz"
+#  args:
+#    chdir: "{{ base_dir }}/bin"
+
+- name: cleanup ign files
+  shell: "rm -rf {{ base_dir }}/ign/* && rm -rf /var/lib/libvirt/images/*.ign"
+  args:
+    chdir: "{{ base_dir }}/ign"
+
+- name: get ssh_public_key
+  shell: cat /root/.ssh/id_rsa.pub
+  register: ssh_keys
+
+- name: set fact - ssh public key
+  set_fact:
+    ssh_public_key: "{{ ssh_keys.stdout }}"
+
+- name: generate install-config
+  template:
+    src: install-config.yaml.j2
+    dest: "{{ base_dir }}/ign/install-config.yaml"
+
+- name: generate ignition files
+  command: "{{ base_dir }}/openshift-install --dir {{ base_dir }}/ign/ create ignition-configs"
+  args:
+    chdir: "{{ base_dir }}"
+
+- name: copy ignition files to libvirt folder
+  shell: "cp -rf {{ base_dir }}/ign/*.ign /var/lib/libvirt/images/"
+  args:
+    chdir: "{{ base_dir }}"
+
+- name: copy kubeconfig to /root/.kube/config
+  shell: "cp -rf {{ base_dir }}/ign/auth/kubeconfig /root/.kube/config"
+  args:
+    chdir: "{{ base_dir }}"
+
+- name: generate start vm script
+  template:
+    src: start-vm.sh.j2
+    dest: "{{ base_dir }}/start-vm.sh"
+    mode: "a+x"

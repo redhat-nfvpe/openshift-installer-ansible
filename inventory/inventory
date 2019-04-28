@@ -1,0 +1,5 @@
+[all:vars]
+ansible_user=root
+
+[hypervisor]
+10.19.111.16

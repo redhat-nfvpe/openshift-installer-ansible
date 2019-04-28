@@ -1,0 +1,67 @@
+- name: install qemu-ev repo
+  become: yes
+  package:
+    name: centos-release-qemu-ev
+    state: present
+
+- name: install package
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - libvirt
+    - libvirt-devel
+    - libvirt-daemon-kvm
+    - qemu-kvm-ev
+    - libguestfs-tools
+    - virt-install
+
+- name: setup libvirt rule
+  become: yes
+  copy:
+    content: |
+      polkit.addRule(function(action, subject) {
+        if (action.id == "org.libvirt.unix.manage" && subject.local && subject.active && subject.isInGroup("wheel")) {
+          return polkit.Result.YES;
+        }
+      });
+    dest: /etc/polkit-1/rules.d/80-libvirt.rules
+
+- name: configure libvirt
+  become: yes
+  lineinfile:
+    path: /etc/libvirt/libvirtd.conf
+    line: "{{ item }}"
+  with_items:
+    - "listen_tls = 0"
+    - "listen_tcp = 1"
+    - auth_tcp="none"
+    - tcp_port="16509"
+
+- name: enable tcp listen
+  become: yes
+  lineinfile:
+    path: /etc/sysconfig/libvirtd
+    line: LIBVIRTD_ARGS="--listen"
+
+- name: configure virsh pool
+  become: yes
+  failed_when: false
+  shell: |
+    virsh pool-define /dev/stdin <<EOF
+      <pool type='dir'>
+        <name>default</name>
+        <target>
+          <path>/var/lib/libvirt/images</path>
+        </target>
+      </pool>
+    EOF
+    virsh pool-start default
+    virsh pool-autostart default
+
+- name: restart libvirtd
+  become: yes
+  service:
+    name: libvirtd
+    state: restarted

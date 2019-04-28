@@ -1,0 +1,41 @@
+---
+- name: install dnsmasq package
+  become: yes
+  package:
+    name: dnsmasq
+    state: present
+
+- name: configure nm
+  become: yes
+  ini_file:
+    path: /etc/NetworkManager/NetworkManager.conf
+    section: main
+    option: dns
+    value: dnsmasq
+
+- name: get host ipv4 address
+  shell: "hostname  -i"
+  register: host_ipv4
+
+- name: configure dnsmasq
+  template:
+    src: openshift.conf.j2
+    dest: /etc/NetworkManager/dnsmasq.d/openshift.conf
+
+- name: configure etc-hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+  with_items:
+    - "{{ host_ipv4.stdout }}  api.{{ cluster_domain }}"
+    - "{{ host_ipv4.stdout }}  api-int.{{ cluster_domain }}"
+    - "192.168.122.112 bootstrap.{{ cluster_domain }}"
+    - "192.168.122.113 master-0.{{ cluster_domain }}"
+    - "192.168.122.113 etcd-0.{{ cluster_domain }}"
+    - "192.168.122.116 worker-0.{{ cluster_domain }}"
+
+- name: reload nm service
+  become: yes
+  service:
+    name: NetworkManager
+    state: reloaded

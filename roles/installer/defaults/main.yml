@@ -1,0 +1,4 @@
+base_dir: /root/env
+release_url: "https://openshift-release-artifacts.svc.ci.openshift.org"
+
+rhcos_url: "https://releases-redhat-coreos.cloud.paas.upshift.redhat.com/storage/releases/ootpa"

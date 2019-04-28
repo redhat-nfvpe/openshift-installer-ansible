@@ -1,0 +1,8 @@
+[all:vars]
+ansible_user=root
+
+openshift_kubeconfig_path="/root/.kube/config"
+openshift_pull_secret_path="/root/pull-secret.txt"
+
+[new_workers]
+worker-1.{{ cluster_domain }}

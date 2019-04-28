@@ -1,0 +1,70 @@
+#!/bin/bash
+
+virsh destroy bootstrap
+virsh undefine bootstrap
+rm -rf /var/lib/libvirt/images/bootstrap.qcow2
+cp {{ base_dir }}/bin/rhcos-{{ rhcos_version }}-qemu.qcow2 /var/lib/libvirt/images/bootstrap.qcow2
+
+virsh destroy master-0
+virsh undefine master-0
+rm -rf /var/lib/libvirt/images/master-0.qcow2
+cp {{ base_dir }}/bin/rhcos-{{ rhcos_version }}-qemu.qcow2 /var/lib/libvirt/images/master-0.qcow2
+
+virsh destroy worker-0
+virsh undefine worker-0
+rm -rf /var/lib/libvirt/images/worker-0.qcow2
+cp {{ base_dir }}/bin/rhcos-{{ rhcos_version }}-qemu.qcow2 /var/lib/libvirt/images/worker-0.qcow2
+
+virt-install \
+	--connect qemu:///system \
+	--import \
+	--name master-0 \
+	--ram 8192 \
+	--vcpus 4 \
+	--os-type=linux \
+	--os-variant=virtio26 \
+	--disk path=/var/lib/libvirt/images/master-0.qcow2,format=qcow2,bus=virtio \
+	--mac 52:54:00:53:20:21 \
+	--vnc \
+	--noautoconsole \
+	--qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/images/master.ign" \
+	--print-xml > /var/lib/libvirt/images/master-0_domain.xml
+
+virt-install \
+	--connect qemu:///system \
+	--import \
+	--name worker-0 \
+	--ram 8192 \
+	--vcpus 4 \
+	--os-type=linux \
+	--os-variant=virtio26 \
+	--disk path=/var/lib/libvirt/images/worker-0.qcow2,format=qcow2,bus=virtio \
+	--mac 52:54:00:53:20:24 \
+	--vnc \
+	--noautoconsole \
+	--qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/images/worker.ign" \
+	--print-xml > /var/lib/libvirt/images/worker-0_domain.xml
+
+virt-install \
+	--connect qemu:///system \
+	--import \
+	--name bootstrap \
+	--ram 16384 \
+	--vcpus 4 \
+	--os-type=linux \
+	--os-variant=virtio26 \
+	--disk path=/var/lib/libvirt/images/bootstrap.qcow2,format=qcow2,bus=virtio \
+	--mac 52:54:00:53:20:20 \
+	--vnc \
+	--noautoconsole \
+	--qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/images/bootstrap.ign" \
+	--print-xml > /var/lib/libvirt/images/bootstrap_domain.xml
+
+virsh define /var/lib/libvirt/images/master-0_domain.xml
+virsh start master-0
+
+virsh define /var/lib/libvirt/images/worker-0_domain.xml
+virsh start worker-0
+
+virsh define /var/lib/libvirt/images/bootstrap_domain.xml
+virsh start bootstrap

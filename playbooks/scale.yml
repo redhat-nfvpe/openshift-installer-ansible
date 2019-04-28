@@ -1,0 +1,13 @@
+---
+- hosts: hypervisor
+  gather_facts: no
+  tasks:
+    - name: set fact - cluster domain
+      set_fact:
+        cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
+
+- name: scale worker node
+  hosts: hypervisor
+  gather_facts: no
+  roles:
+    - roles/scale
