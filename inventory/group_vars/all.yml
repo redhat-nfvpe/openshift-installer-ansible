@@ -4,9 +4,9 @@ cluster_name: multus
 master_replicas: 1
 worker_replicas: 1
 
-pull_secret: '' 
+pull_secret: ''
 
-installer_version: 4.1.0-rc.0
-rhcos_version: 410.8.20190425.2
+installer_version: 4.2.0-0.nightly-2019-07-24-233914
+rhcos_version: 420.8.20190611.0
 
 new_worker_ip: 10.19.111.18
