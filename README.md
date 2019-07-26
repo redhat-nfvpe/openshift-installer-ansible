@@ -47,6 +47,48 @@ ansible-playbook -i inventory/inventory playbooks/deploy.yml
 oc get csr -o name | xargs -n 1 oc adm certificate approve
 ```
 
+- Create storage backend for image_registry Operator
+
+  - The Cluster Image Registry does not pick an storage backend for libvirt platform. Therefore, the cluster operator will be stuck in progressing because it is waiting for administrator to configure a storage backend for the image-registry. You can pick emptyDir for non-production clusters by following:
+```
+oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+```
+
+- Check Cluster Operator status
+
+  - Wait until all the cluster operator become available
+```
+# oc get clusteroperator
+NAME                                      VERSION                             AVAILABLE  PROGRESSING  DEGRADED  SINCE
+authentication                            4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+cloud-credential                          4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+cluster-autoscaler                        4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+console                                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+dns                                       4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+image-registry                            4.2.0-0.nightly-2019-07-24-233914   True       False        False     12m
+ingress                                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+kube-apiserver                            4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+kube-controller-manager                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+kube-scheduler                            4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+machine-api                               4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+machine-config                            4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+marketplace                               4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+monitoring                                4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+network                                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+node-tuning                               4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+openshift-apiserver                       4.2.0-0.nightly-2019-07-24-233914   True       False        False     12m
+openshift-controller-manager              4.2.0-0.nightly-2019-07-24-233914   True       False        False     10m
+openshift-samples                         4.2.0-0.nightly-2019-07-24-233914   True       False        False     15h
+operator-lifecycle-manager                4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+operator-lifecycle-manager-catalog        4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+operator-lifecycle-manager-packageserver  4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+service-ca                                4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+service-catalog-apiserver                 4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+service-catalog-controller-manager        4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+storage                                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+support                                   4.2.0-0.nightly-2019-07-24-233914   True       False        False     16h
+```
+
 ### Scale the cluster with RHEL worker node
 
 Scaling of new RHEL worker node is done via OpenShift-Ansible. Below steps are to prepare the necessary network and inventory file for running openshift-ansible scale script.
